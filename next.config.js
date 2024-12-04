@@ -12,12 +12,8 @@ const nextConfig = {
         source: '/:path*',
         headers: [
           {
-            key: 'Permissions-Policy',
-            value: 'private-state-token-redemption=*, private-state-token-issuance=*, browsing-topics=*'
-          },
-          {
             key: 'Access-Control-Allow-Origin',
-            value: '*'
+            value: process.env.NEXT_PUBLIC_FRONTEND_URL || '*'
           },
           {
             key: 'Access-Control-Allow-Methods',
@@ -46,27 +42,10 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin'
-          }
-        ]
-      },
-      {
-        source: '/api/socketio',
-        headers: [
-          {
-            key: 'Access-Control-Allow-Origin',
-            value: '*'
           },
           {
-            key: 'Access-Control-Allow-Methods',
-            value: 'GET, POST, PUT, DELETE, OPTIONS'
-          },
-          {
-            key: 'Access-Control-Allow-Headers',
-            value: 'X-Requested-With, Content-Type, Authorization'
-          },
-          {
-            key: 'Access-Control-Allow-Credentials',
-            value: 'true'
+            key: 'Permissions-Policy',
+            value: 'browsing-topics=self'
           }
         ]
       }
