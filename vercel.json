@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/socket",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "true"
+      },
+      "continue": true
+    },
+    {
+      "src": "/api/(.*)",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "true"
+      },
+      "continue": true
+    }
+  ],
+  "env": {
+    "MONGODB_URI": "@mongodb-uri",
+    "NEXTAUTH_SECRET": "@nextauth-secret",
+    "JWT_SECRET": "@jwt-secret",
+    "NEXT_PUBLIC_FRONTEND_URL": "@frontend-url",
+    "NEXT_PUBLIC_SOCKET_URL": "@socket-url"
+  }
+}
