@@ -10,29 +10,65 @@ const handle = app.getRequestHandler();
 // Store connected users in memory
 let connectedUsers = [];
 
-// Helper function to clean up disconnected sockets
+// Helper function to clean up disconnected users
 const cleanupDisconnectedUsers = () => {
   connectedUsers = connectedUsers.filter(user => user.socket.connected);
 };
 
 app.prepare().then(() => {
-  const server = createServer((req, res) => handle(req, res));
+  const server = createServer((req, res) => {
+    // Set CORS headers for all requests
+    res.setHeader('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_FRONTEND_URL || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    if (req.method === 'OPTIONS') {
+      res.writeHead(200);
+      res.end();
+      return;
+    }
+    
+    handle(req, res);
+  });
 
-  // Configure Socket.IO with CORS and other production settings
+  // Configure Socket.IO with enhanced settings
   const io = new Server(server, {
     cors: {
       origin: process.env.NEXT_PUBLIC_FRONTEND_URL || "*",
-      methods: ["GET", "POST"],
-      credentials: true
+      methods: ["GET", "POST", "OPTIONS"],
+      credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization"]
     },
     path: "/api/socketio",
-    transports: ['websocket', 'polling'],
-    pingTimeout: 60000,
-    pingInterval: 25000
+    transports: ['polling', 'websocket'], // Start with polling, then upgrade to websocket
+    pingTimeout: 30000,
+    pingInterval: 10000,
+    upgradeTimeout: 10000,
+    allowUpgrades: true,
+    perMessageDeflate: true,
+    httpCompression: true,
+    connectTimeout: 45000,
+    maxHttpBufferSize: 1e8
+  });
+
+  // Error handling middleware
+  io.use((socket, next) => {
+    const handshakeData = socket.handshake;
+    if (handshakeData.headers && handshakeData.headers.authorization) {
+      next();
+    } else {
+      next();
+    }
   });
 
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
+
+    // Handle transport change
+    socket.on('upgrade', (transport) => {
+      console.log('Transport upgraded to:', transport);
+    });
 
     socket.on('register', ({ userId, role }) => {
       // Remove any existing connections for this user
@@ -43,7 +79,8 @@ app.prepare().then(() => {
         socketId: socket.id,
         userID: userId,
         role: role,
-        socket
+        socket,
+        connectedAt: new Date()
       });
       console.log(`User registered - ID: ${userId}, Role: ${role}`);
     });
@@ -203,22 +240,38 @@ app.prepare().then(() => {
       });
     });
 
-    socket.on('disconnect', () => {
-      console.log('Client disconnected:', socket.id);
+    socket.on('disconnect', (reason) => {
+      console.log('Client disconnected:', socket.id, 'Reason:', reason);
       connectedUsers = connectedUsers.filter(
         (item) => item.socketId !== socket.id
       );
       cleanupDisconnectedUsers();
     });
 
-    // Handle errors
+    // Enhanced error handling
     socket.on('error', (error) => {
       console.error('Socket error:', error);
+      // Attempt to reconnect on error
+      if (!socket.connected) {
+        socket.connect();
+      }
+    });
+
+    // Handle transport errors
+    socket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+      // Try alternative transport
+      if (socket.io.opts.transports.includes('websocket')) {
+        socket.io.opts.transports = ['polling'];
+      } else {
+        socket.io.opts.transports = ['websocket'];
+      }
     });
   });
 
-  // Run periodic cleanup
-  setInterval(cleanupDisconnectedUsers, 30000);
+  // Run periodic cleanup more frequently in production
+  const cleanupInterval = process.env.NODE_ENV === 'production' ? 15000 : 30000;
+  setInterval(cleanupDisconnectedUsers, cleanupInterval);
 
   const PORT = process.env.PORT || 3000;
   server.listen(PORT, (err) => {

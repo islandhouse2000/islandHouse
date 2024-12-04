@@ -14,19 +14,24 @@ let socket: typeof Socket | null = null;
 
 const useSocket = (): SocketInstance => {
   if (!socket) {
-    const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
+      (typeof window !== 'undefined' 
+        ? `${window.location.protocol}//${window.location.host}`
+        : '');
 
     socket = io(socketServerUrl, {
       path: '/api/socketio',
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      timeout: 20000,
-      autoConnect: true
+      timeout: 30000,
+      autoConnect: true,
+      forceNew: true
     });
 
+    // Add connection event handlers
     socket.on('connect', () => {
       if (process.env.NODE_ENV !== 'production') {
         console.log('Socket connected successfully');
@@ -37,9 +42,13 @@ const useSocket = (): SocketInstance => {
       if (process.env.NODE_ENV !== 'production') {
         console.error('Socket connection error:', error);
       }
-      // Attempt to reconnect with polling if websocket fails
-      if (socket?.io?.opts?.transports?.includes('websocket')) {
-        socket.io.opts.transports = ['polling'];
+      if (socket?.io?.opts) {
+        const currentTransports = socket.io.opts.transports || [];
+        if (currentTransports.includes('websocket')) {
+          socket.io.opts.transports = ['polling'];
+        } else {
+          socket.io.opts.transports = ['websocket'];
+        }
       }
     });
 
@@ -47,8 +56,8 @@ const useSocket = (): SocketInstance => {
       if (process.env.NODE_ENV !== 'production') {
         console.log('Socket disconnected:', reason);
       }
-      if (reason === 'io server disconnect') {
-        socket?.connect();
+      if (!socket?.connected) {
+        setTimeout(() => socket?.connect(), 1000);
       }
     });
 
@@ -61,6 +70,10 @@ const useSocket = (): SocketInstance => {
     socket.on('reconnect_attempt', (attemptNumber: number) => {
       if (process.env.NODE_ENV !== 'production') {
         console.log('Attempting to reconnect:', attemptNumber);
+      }
+      // On reconnection attempt, try to upgrade transport if possible
+      if (socket?.io) {
+        socket.io.opts.transports = ['polling', 'websocket'];
       }
     });
 
