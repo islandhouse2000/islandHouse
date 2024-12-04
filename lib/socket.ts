@@ -7,10 +7,10 @@ interface SocketResponse {
 }
 
 interface SocketInstance {
-  socket: Socket | null;
+  socket: typeof Socket | null;
 }
 
-let socket: Socket | null = null;
+let socket: typeof Socket | null = null;
 
 const useSocket = (): SocketInstance => {
   if (!socket) {
@@ -21,7 +21,7 @@ const useSocket = (): SocketInstance => {
 
     socket = io(socketServerUrl, {
       path: '/api/socket',
-      addTrailingSlash: false,
+      // addTrailingSlash: false,
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,

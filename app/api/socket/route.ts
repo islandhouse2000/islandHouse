@@ -1,5 +1,4 @@
 import { Server } from 'socket.io';
-import { NextApiResponseServerIO } from '@/types/next';
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 
