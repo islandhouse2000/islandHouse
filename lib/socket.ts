@@ -1,13 +1,21 @@
-import { Socket as SocketIOClient } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import io from 'socket.io-client';
 
-let socket: SocketIOClient | null = null;
+interface SocketResponse {
+  success: boolean;
+  error?: string;
+}
 
-const useSocket = () => {
+interface SocketInstance {
+  socket: typeof Socket | null;
+}
+
+let socket: typeof Socket | null = null;
+
+const useSocket = (): SocketInstance => {
   if (!socket) {
     const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
-    // Socket.IO client configuration
     socket = io(socketServerUrl, {
       path: '/api/socketio',
       transports: ['websocket', 'polling'],
@@ -19,14 +27,13 @@ const useSocket = () => {
       autoConnect: true
     });
 
-    // Connection event handlers
     socket.on('connect', () => {
       if (process.env.NODE_ENV !== 'production') {
         console.log('Socket connected successfully');
       }
     });
 
-    socket.on('connect_error', (error) => {
+    socket.on('connect_error', (error: Error) => {
       if (process.env.NODE_ENV !== 'production') {
         console.error('Socket connection error:', error);
       }
@@ -36,7 +43,7 @@ const useSocket = () => {
       }
     });
 
-    socket.on('disconnect', (reason) => {
+    socket.on('disconnect', (reason: string) => {
       if (process.env.NODE_ENV !== 'production') {
         console.log('Socket disconnected:', reason);
       }
@@ -45,19 +52,19 @@ const useSocket = () => {
       }
     });
 
-    socket.on('reconnect', (attemptNumber) => {
+    socket.on('reconnect', (attemptNumber: number) => {
       if (process.env.NODE_ENV !== 'production') {
         console.log('Socket reconnected after', attemptNumber, 'attempts');
       }
     });
 
-    socket.on('reconnect_attempt', (attemptNumber) => {
+    socket.on('reconnect_attempt', (attemptNumber: number) => {
       if (process.env.NODE_ENV !== 'production') {
         console.log('Attempting to reconnect:', attemptNumber);
       }
     });
 
-    socket.on('reconnect_error', (error) => {
+    socket.on('reconnect_error', (error: Error) => {
       if (process.env.NODE_ENV !== 'production') {
         console.error('Socket reconnection error:', error);
       }
@@ -69,17 +76,15 @@ const useSocket = () => {
       }
     });
 
-    // Message acknowledgment handler
-    socket.on('messageSent', (response: { success: boolean; error?: string }) => {
-      if (!response.success && process.env.NODE_ENV !== 'production') {
-        console.error('Message delivery failed:', response.error);
-      }
-    });
-
-    // Error handler
     socket.on('error', (error: Error) => {
       if (process.env.NODE_ENV !== 'production') {
         console.error('Socket error:', error);
+      }
+    });
+
+    socket.on('messageSent', (response: SocketResponse) => {
+      if (!response.success && process.env.NODE_ENV !== 'production') {
+        console.error('Message delivery failed:', response.error);
       }
     });
   }

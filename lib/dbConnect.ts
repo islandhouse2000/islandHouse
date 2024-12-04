@@ -8,18 +8,15 @@ if (!MONGODB_URI) {
   );
 }
 
-let cached = global.mongoose;
+let cachedConnection: typeof mongoose | null = null;
+let connectionPromise: Promise<typeof mongoose> | null = null;
 
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
-
-async function dbConnect() {
-  if (cached.conn) {
-    return cached.conn;
+async function dbConnect(): Promise<typeof mongoose> {
+  if (cachedConnection) {
+    return cachedConnection;
   }
 
-  if (!cached.promise) {
+  if (!connectionPromise) {
     const opts = {
       bufferCommands: true,
       maxPoolSize: 10,
@@ -28,23 +25,25 @@ async function dbConnect() {
       family: 4
     };
 
-    cached.promise = mongoose
-      .connect(MONGODB_URI, opts)
-      .then((mongoose) => {
-        console.log('MongoDB connected successfully');
-        return mongoose;
-      })
-      .catch((error) => {
-        console.error('MongoDB connection error:', error);
-        throw new Error('Failed to connect to MongoDB');
-      });
+    try {
+      connectionPromise = mongoose.connect(MONGODB_URI, opts);
+      cachedConnection = await connectionPromise;
+      console.log('MongoDB connected successfully');
+      return cachedConnection;
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      connectionPromise = null;
+      cachedConnection = null;
+      throw new Error('Failed to connect to MongoDB');
+    }
   }
 
   try {
-    cached.conn = await cached.promise;
-    return cached.conn;
+    cachedConnection = await connectionPromise;
+    return cachedConnection;
   } catch (error) {
-    cached.promise = null;
+    connectionPromise = null;
+    cachedConnection = null;
     throw error;
   }
 }
