@@ -1,13 +1,14 @@
-import socketClient, { Socket } from 'socket.io-client';
+import { Socket as SocketIOClient } from 'socket.io-client';
+import io from 'socket.io-client';
 
-let socket: Socket | null = null;
+let socket: SocketIOClient | null = null;
 
 const useSocket = () => {
   if (!socket) {
-    const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+    const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
     // Socket.IO client configuration
-    socket = socketClient(socketServerUrl, {
+    socket = io(socketServerUrl, {
       path: '/api/socketio',
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -20,11 +21,15 @@ const useSocket = () => {
 
     // Connection event handlers
     socket.on('connect', () => {
-      console.log('Socket connected successfully');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Socket connected successfully');
+      }
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Socket connection error:', error);
+      }
       // Attempt to reconnect with polling if websocket fails
       if (socket?.io?.opts?.transports?.includes('websocket')) {
         socket.io.opts.transports = ['polling'];
@@ -32,39 +37,50 @@ const useSocket = () => {
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Socket disconnected:', reason);
+      }
       if (reason === 'io server disconnect') {
-        // Reconnect if server disconnected
         socket?.connect();
       }
     });
 
     socket.on('reconnect', (attemptNumber) => {
-      console.log('Socket reconnected after', attemptNumber, 'attempts');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Socket reconnected after', attemptNumber, 'attempts');
+      }
     });
 
     socket.on('reconnect_attempt', (attemptNumber) => {
-      console.log('Attempting to reconnect:', attemptNumber);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Attempting to reconnect:', attemptNumber);
+      }
     });
 
     socket.on('reconnect_error', (error) => {
-      console.error('Socket reconnection error:', error);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Socket reconnection error:', error);
+      }
     });
 
     socket.on('reconnect_failed', () => {
-      console.error('Socket reconnection failed after all attempts');
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Socket reconnection failed after all attempts');
+      }
     });
 
     // Message acknowledgment handler
     socket.on('messageSent', (response: { success: boolean; error?: string }) => {
-      if (!response.success) {
+      if (!response.success && process.env.NODE_ENV !== 'production') {
         console.error('Message delivery failed:', response.error);
       }
     });
 
     // Error handler
     socket.on('error', (error: Error) => {
-      console.error('Socket error:', error);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Socket error:', error);
+      }
     });
   }
 
