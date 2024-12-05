@@ -7,9 +7,9 @@
     "url": "https://github.com/Arnulfo"
   },
   "scripts": {
-    "dev": "ts-node --project tsconfig.server.json server.ts",
+    "dev": "next dev",
     "build": "next build",
-    "start": "NODE_ENV=production ts-node --project tsconfig.server.json server.ts",
+    "start": "next start",
     "lint": "next lint",
     "format": "prettier . --write",
     "prepare": "husky"
@@ -67,7 +67,6 @@
     "eslint": "8.48.0",
     "eslint-config-next": "^14.0.1",
     "express": "^4.21.1",
-    "ioredis": "^5.3.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.447.0",
     "match-sorter": "^6.3.4",
@@ -90,8 +89,8 @@
     "react-responsive": "^10.0.0",
     "recharts": "^2.12.7",
     "sharp": "^0.32.5",
-    "socket.io": "^4.7.4",
-    "socket.io-client": "^4.8.1",
+    "socket.io": "^4.8.0",
+    "socket.io-client": "^4.8.0",
     "sonner": "^1.5.0",
     "sort-by": "^0.0.2",
     "tailwind-merge": "^1.14.0",
