@@ -7,7 +7,7 @@
     "url": "https://github.com/Arnulfo"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "nodemon server.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
