@@ -1,94 +1,127 @@
-# Island House - Deployment Guide
+# Island House Project
 
-## Project Overview
-A Next.js 14 application with real-time features, authentication, and payment processing capabilities.
+A Next.js application with real-time WebSocket functionality.
 
-## Prerequisites
-- Node.js 18.x or later
+## Deployment Guide for Vercel
+
+### Prerequisites
+
 - A Vercel account
-- MongoDB Atlas account
+- Git installed on your machine
+- Node.js 18+ installed
+- MongoDB database setup
 
-## Environment Variables Setup
-1. In your Vercel project settings, add the following environment variables:
+### Step 1: Prepare for Deployment
 
-```env
-# Frontend URL (Update with your Vercel domain)
-NEXT_PUBLIC_FRONTEND_URL=https://your-vercel-domain.vercel.app
-NEXT_PUBLIC_SOCKET_URL=https://your-vercel-domain.vercel.app
+1. Make sure all changes are committed to your Git repository
+2. Ensure your `.env.production` file is properly configured but not committed
+3. Verify that `vercel.json` and `next.config.js` are properly set up
 
-# NextAuth Configuration
-NEXTAUTH_URL=https://your-vercel-domain.vercel.app
-NEXTAUTH_SECRET=your-nextauth-secret-key
+### Step 2: Install Vercel CLI
 
-# JWT Configuration
-JWT_SECRET=your-jwt-secret-key
-
-# MongoDB Configuration
-MONGODB_URI=your-mongodb-connection-string
+```bash
+npm install -g vercel
 ```
 
-## Deployment Steps
+### Step 3: Deploy to Vercel
 
-1. Push your code to GitHub
+1. Login to Vercel:
+```bash
+vercel login
+```
 
-2. In Vercel Dashboard:
-   - Create a new project
-   - Import your GitHub repository
-   - Configure environment variables
-   - Deploy the project
+2. Deploy the project:
+```bash
+vercel
+```
 
-3. After deployment:
-   - Update MongoDB Network Access to allow connections from Vercel's IP addresses
-   - Add your Vercel deployment URL to MongoDB Atlas IP whitelist
-   - Update your application's CORS settings if necessary
+### Step 4: Configure Environment Variables
 
-## Important Notes
+Set the following environment variables in your Vercel project settings:
 
-1. WebSocket Configuration:
-   - WebSocket connections are handled through Next.js API routes
-   - Socket.IO path is set to `/api/socket`
-   - Make sure your client connects to the WebSocket endpoint using the correct URL
+- `NEXT_PUBLIC_FRONTEND_URL`: Your Vercel deployment URL
+- `NEXT_PUBLIC_SOCKET_URL`: Your WebSocket URL (same as frontend URL)
+- `MONGODB_URI`: Your MongoDB connection string
+- `NEXTAUTH_URL`: Your Vercel deployment URL
+- `NEXTAUTH_SECRET`: Your NextAuth secret key
+- `JWT_SECRET`: Your JWT secret key
 
-2. Authentication:
-   - The application uses NextAuth.js for authentication
-   - Credentials provider is configured for email/password login
-   - Google OAuth can be added by configuring the provider in your Google Cloud Console
+### Step 5: Enable WebSocket Support
 
-3. Database:
-   - MongoDB connection is handled through Mongoose
-   - Connection pooling is configured for optimal performance
-   - Make sure your MongoDB Atlas cluster is properly configured for production use
+1. Make sure your `vercel.json` configuration is correct
+2. Verify that the WebSocket endpoint is properly configured
+3. Check that CORS settings are properly set in `next.config.js`
 
-## Troubleshooting
+### Step 6: Verify Deployment
 
-1. If WebSocket connections fail:
-   - Check that your environment variables are correctly set
-   - Verify that the Socket.IO path matches in both client and server code
-   - Ensure your Vercel domain is properly configured in CORS settings
+1. Visit your deployed application
+2. Check the browser console for WebSocket connection status
+3. Test real-time functionality
+4. Monitor Vercel logs for any issues
 
-2. If database connections fail:
-   - Verify your MongoDB connection string
-   - Check MongoDB Atlas network access settings
-   - Ensure your database user has proper permissions
+### Troubleshooting
 
-3. For authentication issues:
-   - Verify NextAuth secret is properly set
-   - Check that your JWT secret is configured
-   - Ensure your authentication callbacks are properly handling user sessions
+If WebSocket connection fails:
 
-## Local Development
+1. Check environment variables in Vercel dashboard
+2. Verify WebSocket endpoint configuration
+3. Check browser console for connection errors
+4. Review Vercel deployment logs
 
-1. Install dependencies:
+### Local Development
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-2. Create a `.env.local` file with your environment variables
+3. Create `.env.local` file with required environment variables
 
-3. Run the development server:
+4. Run the development server:
 ```bash
 npm run dev
 ```
 
+### Important Notes
+
+- WebSocket connections require proper SSL configuration in production
+- Make sure all environment variables are properly set in Vercel
+- The custom server setup requires specific Vercel configuration
+- MongoDB connection should be properly configured for production
+
+## Project Structure
+
+```
+├── app/                  # Next.js app directory
+├── components/          # React components
+├── lib/                 # Utility functions and configurations
+├── public/             # Static assets
+├── server.ts           # Custom server configuration
+├── vercel.json         # Vercel deployment configuration
+└── next.config.js      # Next.js configuration
+```
+
+## Environment Variables
+
+Required environment variables for production:
+
+```env
+NEXT_PUBLIC_FRONTEND_URL=https://your-domain.vercel.app
+NEXT_PUBLIC_SOCKET_URL=wss://your-domain.vercel.app
+MONGODB_URI=your-mongodb-connection-string
+NEXTAUTH_URL=https://your-domain.vercel.app
+NEXTAUTH_SECRET=your-nextauth-secret
+JWT_SECRET=your-jwt-secret
+```
+
 ## Support
-For any deployment issues or questions, please contact support at fazeenlancer@gmail.com
+
+For any deployment issues:
+1. Check Vercel documentation
+2. Review project issues
+3. Contact project maintainers
