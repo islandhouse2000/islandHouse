@@ -1,4 +1,5 @@
-import { io, Socket } from 'socket.io-client';
+import { Socket as SocketIOClient } from 'socket.io-client';
+import io from 'socket.io-client';
 
 interface SocketResponse {
   success: boolean;
@@ -6,102 +7,135 @@ interface SocketResponse {
 }
 
 interface SocketInstance {
-  socket: Socket | null; // typeof Socket 대신 Socket 타입 사용
+  socket: typeof SocketIOClient | null;
+  connect: () => void;
+  disconnect: () => void;
+  isConnected: () => boolean;
 }
 
-let socket: Socket | null = null; // 여기서도 typeof Socket 대신 Socket 사용
+let socket: typeof SocketIOClient | null = null;
 
 const useSocket = (): SocketInstance => {
-  if (!socket) {
-    const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_URL ||
-      (typeof window !== 'undefined'
-        ? `${window.location.protocol}//${window.location.host}`
-        : '');
+  const connectSocket = () => {
+    if (!socket) {
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
+        (typeof window !== 'undefined' ? window.location.origin : '');
 
-    socket = io(socketServerUrl, {
-      path: '/api/socketio',
-      transports: ['polling', 'websocket'],
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 30000,
-      autoConnect: true,
-      forceNew: true
-    });
+      const newSocket = io(socketUrl, {
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
+        autoConnect: true,
+        transports: ['websocket', 'polling']
+      });
 
-    // 이벤트 핸들러 등록
-    socket.on('connect', () => {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Socket connected successfully');
-      }
-    });
+      newSocket.on('connect', () => {
+        console.log('Socket connected successfully', newSocket.id);
+      });
 
-    socket.on('connect_error', (error: Error) => {
-      if (process.env.NODE_ENV !== 'production') {
+      newSocket.on('connect_error', (error: Error) => {
         console.error('Socket connection error:', error);
-      }
-      if (socket?.io?.opts) {
-        const currentTransports = socket.io.opts.transports || [];
-        if (currentTransports.includes('websocket')) {
-          socket.io.opts.transports = ['polling'];
-        } else {
-          socket.io.opts.transports = ['websocket'];
+        // Try to reconnect with both transports
+        if (newSocket.io?.opts) {
+          newSocket.io.opts.transports = ['websocket', 'polling'];
         }
-      }
-    });
+      });
 
-    socket.on('disconnect', (reason: string) => {
-      if (process.env.NODE_ENV !== 'production') {
+      newSocket.on('disconnect', (reason: string) => {
         console.log('Socket disconnected:', reason);
-      }
-      if (!socket?.connected) {
-        setTimeout(() => socket?.connect(), 1000);
-      }
-    });
+        if (reason === 'io server disconnect') {
+          // Reconnect if server disconnected
+          setTimeout(() => newSocket.connect(), 1000);
+        }
+      });
 
-    socket.on('reconnect', (attemptNumber: number) => {
-      if (process.env.NODE_ENV !== 'production') {
+      newSocket.on('reconnect', (attemptNumber: number) => {
         console.log('Socket reconnected after', attemptNumber, 'attempts');
-      }
-    });
+      });
 
-    socket.on('reconnect_attempt', (attemptNumber: number) => {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Attempting to reconnect:', attemptNumber);
-      }
-      // On reconnection attempt, try to upgrade transport if possible
-      if (socket?.io) {
-        socket.io.opts.transports = ['polling', 'websocket'];
-      }
-    });
+      newSocket.on('reconnect_attempt', () => {
+        console.log('Attempting to reconnect...');
+      });
 
-    socket.on('reconnect_error', (error: Error) => {
-      if (process.env.NODE_ENV !== 'production') {
+      newSocket.on('reconnect_error', (error: Error) => {
         console.error('Socket reconnection error:', error);
-      }
-    });
+      });
 
-    socket.on('reconnect_failed', () => {
-      if (process.env.NODE_ENV !== 'production') {
+      newSocket.on('reconnect_failed', () => {
         console.error('Socket reconnection failed after all attempts');
-      }
-    });
+      });
 
-    socket.on('error', (error: Error) => {
-      if (process.env.NODE_ENV !== 'production') {
+      newSocket.on('error', (error: Error) => {
         console.error('Socket error:', error);
-      }
-    });
+      });
 
-    socket.on('messageSent', (response: SocketResponse) => {
-      if (!response.success && process.env.NODE_ENV !== 'production') {
-        console.error('Message delivery failed:', response.error);
-      }
-    });
+      // Event handlers for user registration and messaging
+      newSocket.on('messageSent', (response: SocketResponse) => {
+        if (!response.success) {
+          console.error('Message delivery failed:', response.error);
+        }
+      });
+
+      // Handle server events
+      newSocket.on('receiveMessage', (message: any) => {
+        console.log('Received message:', message);
+      });
+
+      // Handle various response events
+      const responseEvents = [
+        'registerReceive',
+        'verifyReceive',
+        'depositReceive',
+        'withdrawalReceive',
+        'selectAllMultiIds',
+        'selectMultiIds',
+        'selectHistoryMultiIds',
+        'selectWithdrawalMultiIds',
+        'selectWithdrawalHistoryMultiIds',
+        'selectCodeVerifyMultiIds',
+        'selectRegisterMultiIds'
+      ];
+
+      responseEvents.forEach(eventName => {
+        newSocket.on(eventName, (data: any) => {
+          console.log(`Received ${eventName}:`, data);
+        });
+
+        newSocket.on(`${eventName}Ack`, (response: SocketResponse) => {
+          if (!response.success) {
+            console.error(`${eventName} failed:`, response.error);
+          }
+        });
+      });
+
+      socket = newSocket;
+    }
+  };
+
+  const disconnect = () => {
+    if (socket) {
+      socket.disconnect();
+      socket = null;
+    }
+  };
+
+  const isConnected = (): boolean => {
+    return socket?.connected || false;
+  };
+
+  // Auto-connect when the hook is used
+  if (typeof window !== 'undefined' && !socket) {
+    connectSocket();
   }
 
-  return { socket };
+  return {
+    socket,
+    connect: connectSocket,
+    disconnect,
+    isConnected,
+  };
 };
 
 export default useSocket;
