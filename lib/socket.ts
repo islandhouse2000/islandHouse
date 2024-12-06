@@ -1,5 +1,4 @@
-import { Socket } from 'socket.io-client';
-import io from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 
 interface SocketResponse {
   success: boolean;
@@ -7,15 +6,15 @@ interface SocketResponse {
 }
 
 interface SocketInstance {
-  socket: typeof Socket | null;
+  socket: Socket | null; // typeof Socket 대신 Socket 타입 사용
 }
 
-let socket: typeof Socket | null = null;
+let socket: Socket | null = null; // 여기서도 typeof Socket 대신 Socket 사용
 
 const useSocket = (): SocketInstance => {
   if (!socket) {
-    const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
-      (typeof window !== 'undefined' 
+    const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_URL ||
+      (typeof window !== 'undefined'
         ? `${window.location.protocol}//${window.location.host}`
         : '');
 
@@ -31,7 +30,7 @@ const useSocket = (): SocketInstance => {
       forceNew: true
     });
 
-    // Add connection event handlers
+    // 이벤트 핸들러 등록
     socket.on('connect', () => {
       if (process.env.NODE_ENV !== 'production') {
         console.log('Socket connected successfully');
